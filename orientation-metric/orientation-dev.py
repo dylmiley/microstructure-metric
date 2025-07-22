@@ -27,21 +27,45 @@ def misorientation(q1, q2):
     r = quatmult(q1, q2)
     return r
 
+def create_FID(G, unique_q):
+    ### assigning a FID for each unique orientation ###
+    n = np.shape(G)[0]
+    FID = 0
+    where_q = np.zeros((n,n))
+    for quats in unique_q:
+        where_q[np.where(G == quats)] = FID 
+        FID += 1 
+    return where_q
+
 def texture_graph(A,B):
     ### the graph for orientation difference for two windows, A and B ###
     n = np.shape(A)[0]
     G = np.zeros((n**2, n**2))
+
+    ### we only want to compute disorientation for unique pairs ###
     uniqueA = np.unique(A.reshape(-1,4), axis=0)
     uniqueB = np.unique(B.reshape(-1,4), axis=0)
+    nA = np.shape(uniqueA)[0]
+    nB = np.shape(uniqueA)[0]
+    fidA = create_FID(A, uniqueA)
+    fidB = create_FID(B, uniqueB)
+    misorientations = np.zeros((nA,nB))
+    i = 0
+    j = 0
+    for quatA in uniqueA:
+        for quatB in uniqueB:
+            misorientations[i,j] = misorientation(quatA, quatB)
+            i+=1
+            j+=1
     
+    ### assign disorientation to the full graph ###
+    for i in range(n**2):
+        for j in range(n**2):
+            G[i,j] = misorientations[fidA[i%n,j%n], fidB[i%n,j%n]]
+    
+    return G
 
-    for i in range(n):
-        for j in range(n):
-            for k in range(n):
-                for l in range(n):
-                    for entry in rotation_list:
-                        if 
-                    G[]
+    
 
 if '__name__' == __main__:
     rng = np.random.default_rng()
