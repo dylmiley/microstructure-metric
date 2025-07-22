@@ -27,53 +27,54 @@ def misorientation(q1, q2):
     r = quatmult(q1, q2)
     return r
 
-def create_FID(G, unique_q):
+def create_FID(G, unique_q, n):
     ### assigning a FID for each unique orientation ###
-    n = np.shape(G)[0]
     FID = 0
-    where_q = np.zeros((n,n))
+    where_q = np.zeros((n,n), dtype = int)
     for quats in unique_q:
-        where_q[np.where(G == quats)] = FID 
-        FID += 1 
+        where_q[np.where(G == quats)[:2]] = FID
+        FID += 1
     return where_q
+
 
 def texture_graph(A,B):
     ### the graph for orientation difference for two windows, A and B ###
     n = np.shape(A)[0]
-    G = np.zeros((n**2, n**2))
+    G = np.zeros((n**2, n**2,4))
 
     ### we only want to compute disorientation for unique pairs ###
     uniqueA = np.unique(A.reshape(-1,4), axis=0)
     uniqueB = np.unique(B.reshape(-1,4), axis=0)
     nA = np.shape(uniqueA)[0]
     nB = np.shape(uniqueA)[0]
-    fidA = create_FID(A, uniqueA)
-    fidB = create_FID(B, uniqueB)
-    misorientations = np.zeros((nA,nB))
+    fidA = create_FID(A, uniqueA, n)
+    fidB = create_FID(B, uniqueB, n)
+    misorientations = np.zeros((nA,nB,4))
     i = 0
-    j = 0
     for quatA in uniqueA:
+        j = 0
         for quatB in uniqueB:
             misorientations[i,j] = misorientation(quatA, quatB)
-            i+=1
             j+=1
-    
+        i+=1
     ### assign disorientation to the full graph ###
-    for i in range(n**2):
-        for j in range(n**2):
-            G[i,j] = misorientations[fidA[i%n,j%n], fidB[i%n,j%n]]
-    
+    for i in range(n):
+        for j in range(n):
+            a = i*n + j
+            for k in range(n):
+                for l in range(n):
+                    b = k*n + l
+                    print(misorientations[fidA[i,j], fidB[k,l]])
+                    G[a,b] = misorientations[fidA[i,j], fidB[k,l]]
+
     return G
 
+
     
 
-if '__name__' == __main__:
+if __name__ == '__main__':
+    l = 5
     rng = np.random.default_rng()
-    
-    ### create transport landscape for a 5x5 window ###
-    l = 5         # px side length of windows
-    m = int(l**2) # px area of windows
-    iwB = mwmb.intrawindow_block(l)
 
     ### create 2 random orientations ###
     q1 = rng.random(size=4)
@@ -91,4 +92,8 @@ if '__name__' == __main__:
     ijB = rng.integers(0, 5, size=(rng.integers(0,25), 2))
     for ij in ijB:
         B[ij[0], ij[1], :] = q2
-    
+
+    G = texture_graph(A,B)
+    print(A)
+    print(B)
+    print(G)
