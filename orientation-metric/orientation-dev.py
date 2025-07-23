@@ -11,11 +11,11 @@ def quatmult(q1, q2):
                      [1, 0, 3, 2],
                      [2, 3, 0, 1],
                      [3, 2, 1, 0]])
-        
+
     sign = np.array([[1,-1,-1,-1], [1,1,-1,1], [1,1,1,-1], [1,-1,1,1]])
     prod = np.zeros(4)
     c = 0
-    for row in ind2: 
+    for row in ind2:
         prod[c] = np.dot(q1[ind1], q2[row]*sign[c])
         c+=1
     return prod
@@ -23,9 +23,11 @@ def quatmult(q1, q2):
 
 def misorientation(q1, q2):
     ### calculation of rotation quaternion for q1 and q2 ###
+    r = quatmult(q2, q1)
     q2[1:] *= -1
-    r = quatmult(q1, q2)
+    r = quatmult(r, q2)
     return r
+
 
 def create_FID(G, unique_q, n):
     ### assigning a FID for each unique orientation ###
@@ -49,13 +51,14 @@ def texture_graph(A,B):
     nB = np.shape(uniqueA)[0]
     fidA = create_FID(A, uniqueA, n)
     fidB = create_FID(B, uniqueB, n)
+    print(fidA + 2*fidB)
     misorientations = np.zeros((nA,nB,4))
     i = 0
     for quatA in uniqueA:
         j = 0
         for quatB in uniqueB:
             misorientations[i,j] = misorientation(quatA, quatB)
-            j+=1
+        j+=1
         i+=1
     ### assign disorientation to the full graph ###
     for i in range(n):
@@ -64,13 +67,11 @@ def texture_graph(A,B):
             for k in range(n):
                 for l in range(n):
                     b = k*n + l
-                    print(misorientations[fidA[i,j], fidB[k,l]])
                     G[a,b] = misorientations[fidA[i,j], fidB[k,l]]
 
     return G
 
 
-    
 
 if __name__ == '__main__':
     l = 5
@@ -86,14 +87,11 @@ if __name__ == '__main__':
     A = np.ones((l,l,4))
     A[:,:]*=q1
     B = np.ones((l,l,4))
-    ijA = rng.integers(0, 5, size=(rng.integers(0,25), 2))
+    ijA = rng.integers(0, l, size=(rng.integers(0,l**2), 2))
     for ij in ijA:
         A[ij[0], ij[1], :] = q2
-    ijB = rng.integers(0, 5, size=(rng.integers(0,25), 2))
+    ijB = rng.integers(0, l, size=(rng.integers(0,l**2), 2))
     for ij in ijB:
         B[ij[0], ij[1], :] = q2
 
     G = texture_graph(A,B)
-    print(A)
-    print(B)
-    print(G)
