@@ -2,7 +2,9 @@ import sys
 sys.path.append('../state-space/')
 
 import numpy as np
-import master_wass_metric_binary as mwmb
+import matplotlib.pyplot as plt
+
+#import master_wass_metric_binary as mwmb
 
 def quatmult(q1, q2):
     ### quaternion multiplication ### 
@@ -20,12 +22,17 @@ def quatmult(q1, q2):
         c+=1
     return prod
 
+def misorientation_angle(q1, q2):
+    ### calculate orientation distance between two quaternions, assuming that 
+    ### the ordering of the quaternion parameters is (real, imaginary)
+    return 2*np.arccos(abs(q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2] - q1[3]*q2[3]))
+    
 
 def misorientation(q1, q2):
     ### calculation of rotation quaternion for q1 and q2 ###
-    r = quatmult(q2, q1)
-    q2[1:] *= -1
-    r = quatmult(r, q2)
+    q2inv = np.copy(q2)
+    q2inv[1:] *= -1
+    r = quatmult(q1, q2)
     return r
 
 
@@ -36,13 +43,15 @@ def create_FID(G, unique_q, n):
     for quats in unique_q:
         where_q[np.where(G == quats)[:2]] = FID
         FID += 1
+    plt.imshow(where_q)
+    plt.show()
     return where_q
 
 
 def texture_graph(A,B):
     ### the graph for orientation difference for two windows, A and B ###
     n = np.shape(A)[0]
-    G = np.zeros((n**2, n**2,4))
+    G = np.zeros((n**2, n**2))
 
     ### we only want to compute disorientation for unique pairs ###
     uniqueA = np.unique(A.reshape(-1,4), axis=0)
@@ -51,13 +60,15 @@ def texture_graph(A,B):
     nB = np.shape(uniqueA)[0]
     fidA = create_FID(A, uniqueA, n)
     fidB = create_FID(B, uniqueB, n)
-    print(fidA + 2*fidB)
-    misorientations = np.zeros((nA,nB,4))
+    plt.imshow(fidA + 2*fidB)
+    plt.show()
+    misorientations = np.zeros((nA,nB))
     i = 0
+    
     for quatA in uniqueA:
         j = 0
         for quatB in uniqueB:
-            misorientations[i,j] = misorientation(quatA, quatB)
+            misorientations[i,j] = misorientation_angle(quatA, quatB)
         j+=1
         i+=1
     ### assign disorientation to the full graph ###
@@ -82,16 +93,25 @@ if __name__ == '__main__':
     q1 = q1 / np.linalg.norm(q1)
     q2 = rng.random(size=4)
     q2 = q2 / np.linalg.norm(q2)
-
+    q3 = rng.random(size=4)
+    q3 = q3 / np.linalg.norm(q3)
+    q4 = rng.random(size=4)
+    q4 = q4 / np.linalg.norm(q4)
+    qs = [q2,q3,q4]
     ### create two windows with randomly assigned q1 and q2 ###
     A = np.ones((l,l,4))
     A[:,:]*=q1
     B = np.ones((l,l,4))
+    B[:,:]*=q1
+
     ijA = rng.integers(0, l, size=(rng.integers(0,l**2), 2))
     for ij in ijA:
-        A[ij[0], ij[1], :] = q2
+        A[ij[0], ij[1], :] = qs[rng.integers(3)]
     ijB = rng.integers(0, l, size=(rng.integers(0,l**2), 2))
     for ij in ijB:
-        B[ij[0], ij[1], :] = q2
+        B[ij[0], ij[1], :] = qs[rng.integers(3)]
+
 
     G = texture_graph(A,B)
+    plt.imshow(G)
+    plt.show()
